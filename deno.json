@@ -1,0 +1,31 @@
+{
+  "name": "@bureaudouble/rsc-engine",
+  "version": "0.0.12",
+  "compilerOptions": {
+    "lib": ["dom", "dom.iterable", "dom.asynciterable", "deno.ns"]
+  },
+  "exports": {
+    ".": "./mod.ts",
+    "./jsx-runtime": "./jsxRuntime.ts",
+    "./react-server-dom-esm/node-loader": "./vendor/react-server-dom-esm/react-server-dom-esm-node-loader.production.js",
+    "./react-server-dom-esm/server.edge": "./renderToReadableStream.ts",
+    "./react-server-dom-esm/server.node": "./vendor/react-server-dom-esm/cjs/react-server-dom-esm-server.node.development.js",
+    "./react-server-dom-esm/client.browser": "./vendor/react-server-dom-esm/react-server-dom-esm-client.browser.development.js"
+  },
+  "imports": {
+    "@luca/esbuild-deno-loader": "jsr:@bureaudouble-forks/esbuild-deno-loader@0.10.3+nestarz.quiet.0.0.3",
+    "esbuild-types": "./vendor/@types/esbuild.ts",
+    "@teemukurki/rate-limiter": "jsr:@teemukurki/rate-limiter@^0.0.3",
+    "@std/path/": "jsr:/@std/path@0.224.0/",
+    "@types/react": "npm:types-react@alpha",
+    "@types/react-dom": "npm:types-react-dom@alpha",
+    "acorn-loose": "npm:acorn-loose@^8.4.0",
+    "react": "npm:react@19.0.0-beta-b498834eab-20240506",
+    "react-dom": "npm:react-dom@19.0.0-beta-b498834eab-20240506",
+    "react-dom/": "npm:/react-dom@19.0.0-beta-b498834eab-20240506/",
+    "react/": "npm:/react@19.0.0-beta-b498834eab-20240506/",
+    "react-server-dom-esm/node-loader": "./vendor/react-server-dom-esm/react-server-dom-esm-node-loader.production.js",
+    "react-server-dom-esm/server.node": "./vendor/react-server-dom-esm/cjs/react-server-dom-esm-server.node.development.js",
+    "react-server-dom-esm/client.browser": "./vendor/react-server-dom-esm/react-server-dom-esm-client.browser.development.js"
+  }
+}
