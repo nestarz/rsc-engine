@@ -48,6 +48,7 @@ export interface ModuleEntryEsm extends ModuleEntryBase {
   map: string | null;
   mediaType: MediaType;
   size: number;
+  dependencies?: Dependency[];
 }
 
 export interface ModuleEntryJson extends ModuleEntryBase {
@@ -67,6 +68,23 @@ export interface ModuleEntryNode extends ModuleEntryBase {
   moduleName: string;
 }
 
+interface Dependency {
+  specifier: string;
+  code: {
+    specifier: string;
+    span: {
+      start: {
+        line: number;
+        character: number;
+      };
+      end: {
+        line: number;
+        character: number;
+      };
+    };
+  };
+}
+
 export interface NpmPackage {
   name: string;
   version: string;
@@ -79,6 +97,7 @@ interface InfoOptions {
   importMap?: string;
   lock?: string;
   nodeModulesDir?: boolean;
+  quiet?: boolean;
 }
 
 export async function info(
@@ -108,6 +127,9 @@ export async function info(
   if (options.nodeModulesDir) {
     opts.args.push("--node-modules-dir");
   }
+  if (options.quiet) {
+    opts.args.push("--quiet");
+  }
   if (options.cwd) {
     opts.cwd = options.cwd;
   } else {
@@ -127,3 +149,4 @@ export async function info(
   const txt = new TextDecoder().decode(output.stdout);
   return JSON.parse(txt);
 }
+

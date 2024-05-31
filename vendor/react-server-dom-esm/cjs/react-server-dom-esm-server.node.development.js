@@ -231,11 +231,11 @@ function close$1(destination) {
 }
 var textEncoder = new util.TextEncoder();
 function stringToChunk(content) {
-  return content;
+  return textEncoder.encode(content);
 }
 function byteLengthOfChunk(chunk) {
   return typeof chunk === "string"
-    ? Buffer.byteLength(chunk, "utf8")
+    ? textEncoder.encode(chunk).length
     : chunk.byteLength;
 }
 function closeWithError(destination, error) {
@@ -4283,4 +4283,4 @@ function decodeReply(body, moduleBasePath) {
 // exports.registerServerReference = registerServerReference;
 // exports.renderToPipeableStream = renderToPipeableStream;
 
-export {renderToPipeableStream, registerClientReference}
+export {decodeAction, decodeFormState, decodeReply, decodeReplyFromBusboy, renderToPipeableStream, registerClientReference, registerServerReference};
