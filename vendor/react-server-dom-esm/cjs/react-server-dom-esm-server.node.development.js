@@ -324,7 +324,6 @@ function resolveClientReferenceMetadata(config, clientReference) {
   var exportName = id.slice(idx + 1);
   var fullURL = id.slice(0, idx);
 
-  console.log(baseURL, fullURL);
   if (!fullURL.startsWith(baseURL)) {
     console.error(fullURL, baseURL);
     throw new Error(

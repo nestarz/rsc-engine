@@ -1,6 +1,6 @@
 {
   "name": "@bureaudouble/rsc-engine",
-  "version": "0.0.64",
+  "version": "0.0.102",
   "compilerOptions": {
     "lib": ["dom", "dom.iterable", "dom.asynciterable", "deno.ns"],
     "jsx": "react-jsx",
@@ -10,6 +10,8 @@
   "exports": {
     ".": "./mod.ts",
     "./ClientOnly": "./ClientOnly.tsx",
+    "./react.react-server": "./vendor/react/react.react-server.production.js",
+    "./react.forker": "./react.forker.ts",
     "./react-server-dom-esm/node-loader": "./vendor/react-server-dom-esm/react-server-dom-esm-node-loader.production.js",
     "./react-server-dom-esm/server.edge": "./renderToReadableStream.ts",
     "./react-server-dom-esm/server.node": "./vendor/react-server-dom-esm/cjs/react-server-dom-esm-server.node.development.js",
@@ -26,12 +28,15 @@
     "@types/react": "npm:types-react@alpha",
     "@types/react-dom": "npm:types-react-dom@alpha",
     "acorn-loose": "npm:acorn-loose@^8.4.0",
-    "react": "npm:react@19.0.0-beta-b498834eab-20240506",
-    "react-dom": "npm:react-dom@19.0.0-beta-b498834eab-20240506",
-    "react-dom/": "npm:/react-dom@19.0.0-beta-b498834eab-20240506/",
-    "react/": "npm:/react@19.0.0-beta-b498834eab-20240506/",
+    "rsc-html-stream": "jsr:@bureaudouble/rsc-html-stream@0.0.2",
+    "react": "npm:react@19.0.0-rc.0",
+    "react-dom": "npm:react-dom@19.0.0-rc.0",
+    "react-dom/": "npm:/react-dom@19.0.0-rc.0/",
+    "react/": "npm:/react@19.0.0-rc.0/",
+    "react-server-dom-esm/server.edge": "./renderToReadableStream.ts",
     "react-server-dom-esm/node-loader": "./vendor/react-server-dom-esm/react-server-dom-esm-node-loader.production.js",
     "react-server-dom-esm/server.node": "./vendor/react-server-dom-esm/cjs/react-server-dom-esm-server.node.development.js",
-    "react-server-dom-esm/client.browser": "./vendor/react-server-dom-esm/react-server-dom-esm-client.browser.development.js"
+    "react-server-dom-esm/client.browser": "./vendor/react-server-dom-esm/react-server-dom-esm-client.browser.development.js",
+    "react.react-server": "./vendor/react/react.react-server.production.js"
   }
 }

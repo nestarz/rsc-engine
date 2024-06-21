@@ -4,7 +4,13 @@ import { lazy, Suspense, useEffect, useState } from "react";
 
 const cache = new Map();
 const namedLazy = (f: string, e?: string) =>
-  lazy(() => import(f).then((v) => ({ default: v[e ?? "default"] })));
+  lazy(() =>
+    import(f).then((v) =>
+      new Promise((res) =>
+        setTimeout(() => res({ default: v[e ?? "default"] } as any), 5) // hack for circular ?
+      )
+    )
+  );
 
 export const ClientReference = ({
   fileUrl,
