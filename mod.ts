@@ -245,12 +245,16 @@ class PathTransformStream {
 }
 const toImportUrl = (str: string, k = ".") =>
   URL.canParse(str) ? str : `${k}/${join(".", str)}`;
-const getRelativePathOrUrl = (specifier: string, relativeDir = Deno.cwd()) =>
-  URL.canParse(specifier)
-    ? new URL(specifier).protocol === "file:"
-      ? relative(relativeDir, fromFileUrl(specifier))
-      : specifier
+const getRelativePathOrUrl = (specifier: string, relativeDir = Deno.cwd()) => {
+  const corrected = specifier.startsWith("//")
+    ? "https:".concat(specifier)
+    : specifier;
+  return URL.canParse(corrected)
+    ? new URL(corrected).protocol === "file:"
+      ? relative(relativeDir, fromFileUrl(corrected))
+      : corrected
     : relative(relativeDir, specifier);
+};
 
 const locateModuleInBuild = (build: Esbuild.BuildResult, specifier: string) =>
   Object.entries(build.metafile?.outputs ?? {}).find(
@@ -354,7 +358,7 @@ const setupClientComponentsBase = async (
   }
 
   const importMapResponse = await fetch(manifest.importMap);
-  const importMap = await importMapResponse.json() as {
+  const importMap = (await importMapResponse.json()) as {
     imports?: Record<string, string>;
     scopes?: Record<string, Record<string, string>>;
   };
@@ -466,6 +470,7 @@ const setupClientComponentsBase = async (
       .filter((module) => module.directive === "server")
       .map((module) => resolveModuleSpecifier(module))
       .map((resolvedModule) => resolvedModule.entryPoint),
+    plugins: [...denoPlugins(esbuildOptions)],
     metafile: true,
     write: false,
     outdir: absolute("."),
@@ -711,7 +716,13 @@ const setupClientComponentsBase = async (
   );
 
   const removeExcept = async (dirPath: string, toKeep: string[]) => {
-    if (await Deno.stat(dirPath).then(() => false).catch(() => true)) return;
+    if (
+      await Deno.stat(dirPath)
+        .then(() => false)
+        .catch(() => true)
+    ) {
+      return;
+    }
     for await (const dirEntry of Deno.readDir(dirPath)) {
       const fn = join(dirPath, dirEntry.name);
       if (toKeep.includes(fn)) continue;
