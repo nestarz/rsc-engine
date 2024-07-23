@@ -12,6 +12,7 @@ import { resolveImportMap } from "@bureaudouble-forks/importmap";
 import { denoPlugins } from "@luca/esbuild-deno-loader";
 import { RateLimiter } from "@teemukurki/rate-limiter";
 import { getHashSync } from "@bureaudouble/scripted";
+import { calculate } from "@std/http/etag";
 
 import { info, type ModuleEntryEsm } from "./info.ts";
 import { createRenderer } from "./createRenderer.ts";
@@ -275,11 +276,12 @@ const pkg = "npm:esbuild@0.21.4";
 const withWritePermission: boolean =
   (await Deno.permissions.query({ name: "write", path: Deno.cwd() })).state ===
     "granted";
+console.time("[rsc-engine] esbuild imported");
 const esbuild: typeof Esbuild | null = withWritePermission
   ? ((await import(
     `data:application/javascript,export * from "${pkg}";`
   ).finally(() =>
-    console.log("[rsc-engine] esbuild imported")
+    console.timeEnd("[rsc-engine] esbuild imported")
   )) as typeof Esbuild)
   : null;
 const createTimeStartEnd = (ns: string, timeIndex = 0) => (key: string) => {
@@ -352,11 +354,14 @@ const setupClientComponentsBase = async (
   }
 
   const importMapResponse = await fetch(manifest.importMap);
-  const importMap = await importMapResponse.json();
+  const importMap = await importMapResponse.json() as {
+    imports?: Record<string, string>;
+    scopes?: Record<string, Record<string, string>>;
+  };
   const cleanReferences = createRemoveReferences(relativeReferenceDirectory);
   const scopesWithoutReferences = createRemoveReferences(
     relativeReferenceDirectory,
-  )(importMap.scopes);
+  )(importMap.scopes ?? {});
 
   const infoOptions = {
     quiet: true,
@@ -364,10 +369,20 @@ const setupClientComponentsBase = async (
       JSON.stringify(
         resolveImportMap(
           {
-            imports: {
-              ...importMap.imports,
-              ...(manifest.clientImports?.imports ?? {}),
-            },
+            imports: Object.fromEntries(
+              Object.entries({
+                ...importMap.imports,
+                ...(manifest.clientImports?.imports ?? {}),
+              }).flatMap(([k, v]) => [
+                [k, v],
+                ...(k.endsWith("/") ? [] : [
+                  [
+                    `${k}/`,
+                    `${v.replace("npm:", "npm:/").replace("jsr:", "jsr:/")}/`,
+                  ],
+                ]),
+              ]),
+            ),
             scopes: scopesWithoutReferences,
           },
           new URL(importMapResponse.url),
@@ -458,9 +473,21 @@ const setupClientComponentsBase = async (
     jsx: "automatic",
   });
 
+  const timeEndEntryInfo = timeStartEnd("entry-info");
   const entryInfos = await Promise.all(
-    entryPoints.map((specifier) => info(specifier, infoOptions)),
+    (
+      await Promise.all(
+        entryPoints.map((specifier) => info(specifier, infoOptions)),
+      )
+    )
+      .flatMap((v) => v.modules)
+      .filter((v) => "local" in v)
+      .filter((v) => !v.specifier.startsWith("http"))
+      .filter((v) => !v.specifier.startsWith("jsr:"))
+      .filter((v) => !v.specifier.startsWith("npm:"))
+      .map((v) => Deno.stat(v.local!).then(calculate)),
   );
+  timeEndEntryInfo();
 
   let isPresentInJson = true;
   const newScopes = scopesWithDependencies
@@ -474,11 +501,10 @@ const setupClientComponentsBase = async (
       const relativeOutputFilePath = toImportUrl(
         join(relativeReferenceDirectory, outputFileName),
       );
-      const moduleKey =
-        new URL(scope).protocol === "file:" ||
+      const moduleKey = new URL(scope).protocol === "file:" ||
           !dependency.specifier.startsWith(".")
-          ? dependency.specifier
-          : toImportUrl(getRelativePathOrUrl(specifier), "@");
+        ? dependency.specifier
+        : toImportUrl(getRelativePathOrUrl(specifier), "@");
       const relscope = toImportUrl(getRelativePathOrUrl(scope), ".");
       isPresentInJson =
         localImportMap.scopes[relscope]?.[moduleKey] === relativeOutputFilePath;
@@ -648,7 +674,7 @@ const setupClientComponentsBase = async (
       imports: { [k: string]: string };
       scopes: { [k: string]: { [k: string]: string } };
     }) => {
-      const jsonReferencesCode = Object.values(data.scopes)
+      const jsonReferencesCode = Object.values(data?.scopes ?? {})
         .flatMap((v) => Object.values(v))
         .map((v) => absolute(v))
         .filter((v) => v.includes(basePath));
@@ -685,6 +711,7 @@ const setupClientComponentsBase = async (
   );
 
   const removeExcept = async (dirPath: string, toKeep: string[]) => {
+    if (await Deno.stat(dirPath).then(() => false).catch(() => true)) return;
     for await (const dirEntry of Deno.readDir(dirPath)) {
       const fn = join(dirPath, dirEntry.name);
       if (toKeep.includes(fn)) continue;

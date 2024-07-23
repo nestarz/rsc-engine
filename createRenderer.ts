@@ -11,6 +11,7 @@ import { injectRSCPayload } from "rsc-html-stream/server";
 import { fromFileUrl } from "@std/path/from-file-url";
 import { toFileUrl } from "@std/path/to-file-url";
 import { join } from "@std/path/join";
+import urlcat from "@bureaudouble/outils/urlcat.ts";
 
 export const createRenderer = (
   clientRsc: {
@@ -22,14 +23,16 @@ export const createRenderer = (
   },
   moduleBaseURL: string,
 ) =>
-(importFn: () => any) => {
+(importFn: () => any, state?: any) => {
   const moduleBasePath = fromFileUrl(moduleBaseURL);
   return async (ctx: any) => {
-    const req = ctx.request;
+    Object.assign(ctx.state, state ?? {});
+    const req = ctx.request as Request;
     await clientRsc.hasClientBuildFinished();
-    let redirectUrl: string | undefined;
+    let redirect: { url: string; status: number } | undefined;
     const rscActionResult = req.method === "POST" &&
-        req.headers.get("Accept") === "text/x-component"
+        req.headers.get("Accept") === "text/x-component" &&
+        !new URL(req.url).searchParams.has("x-rsc-redirected")
       ? {
         _value: await (async () => {
           const contentType = req.headers.get("Content-Type");
@@ -44,21 +47,28 @@ export const createRenderer = (
           ).split("#");
           const href = toFileUrl(join(Deno.cwd(), relativePath)).href;
           const { [exportName]: fn } = href ? await import(href) : {};
-          ctx.state.redirect = (v: string) => (redirectUrl = v);
+          ctx.state.redirect = (
+            url: string,
+            options?: { status?: number },
+          ) => (redirect = { url, status: 307, ...options ?? {} });
           return await ctx.state.routeStorage?.run(ctx, fn, ...actionArgs) ??
             fn?.(...actionArgs);
         })(),
       }
       : null;
 
-    if (redirectUrl) {
-      return URL.canParse(redirectUrl)
+    if (redirect) {
+      return URL.canParse(redirect.url)
         ? new Response(null, {
-          headers: { "x-rsc-redirect": redirectUrl! },
+          headers: { "x-rsc-redirect": redirect.url! },
         })
         : new Response(null, {
-          status: 302,
-          headers: { Location: redirectUrl },
+          status: redirect.status,
+          headers: {
+            Location: urlcat(redirect.url, {
+              "x-rsc-redirected": redirect.status,
+            }),
+          },
         });
     }
 
