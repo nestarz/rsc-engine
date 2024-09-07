@@ -543,19 +543,33 @@ const setupClientComponentsBase = async (
   const esbuildServerActionPlugin: Esbuild.Plugin = {
     name: "client-server-actions",
     setup: (build) => {
+      const cache = new Map();
       build.onLoad({ filter: /\.(ts|tsx)$/ }, async ({ path }) => {
+        const value = cache.get(path);
+        if (value) return value;
         const relativePath = getRelativePathOrUrl(path);
         const exports = Object.values(
           esbuildServerResult.metafile?.outputs ?? {},
         ).find(({ entryPoint }) => entryPoint === relativePath)?.exports;
         if (exports) {
-          return {
+          const value = {
             contents: generateServerReferenceClientCode(relativePath, exports),
             loader: "ts",
           };
+          cache.set(path, value);
+          return value;
         }
       });
     },
+  };
+
+  const removeExcept = async (dirPath: string, toKeep: string[]) => {
+    if (!(await Deno.stat(dirPath).then(() => true).catch(() => false))) return;
+    for await (const dirEntry of Deno.readDir(dirPath)) {
+      const fn = join(dirPath, dirEntry.name);
+      if (toKeep.includes(fn)) continue;
+      await Deno.remove(join(dirPath, dirEntry.name), { recursive: true });
+    }
   };
 
   state.esbuildContext = useCacheContext
@@ -565,7 +579,7 @@ const setupClientComponentsBase = async (
         esbuildServerActionPlugin,
         {
           name: "dynamic-react-resolver",
-          setup(build) {
+          setup(build: Esbuild.PluginBuild) {
             build.onResolve(
               {
                 filter: /react\.react-server/,
@@ -589,6 +603,7 @@ const setupClientComponentsBase = async (
       splitting: true,
       metafile: true,
       treeShaking: true,
+      write: false,
       minify: manifest.minify,
       format: "esm",
       jsx: "automatic",
@@ -596,8 +611,19 @@ const setupClientComponentsBase = async (
   state.entryPoints = entryPoints;
 
   const timeEndBuild = timeStartEnd("build");
-  await Deno.remove(outputDirectory, { recursive: true }).catch(() => null);
   const esbuildResult = await state.esbuildContext!.rebuild();
+  await removeExcept(
+    outputDirectory,
+    (esbuildResult.outputFiles ?? []).map((f) => f.path),
+  );
+  await Promise.all((esbuildResult.outputFiles ?? []).map(async (out) => {
+    if (await Deno.stat(out.path).then(() => true).catch(() => false)) return;
+    await Deno.mkdir(dirname(out.path), { recursive: true }).catch(
+      () => null,
+    );
+    await Deno.writeFile(out.path, out.contents);
+    console.log("[rsc-engine] wrote", out.path);
+  }));
   timeEndBuild();
 
   const createProxySpecifier = (specifier: string) =>
@@ -715,20 +741,6 @@ const setupClientComponentsBase = async (
     },
   );
 
-  const removeExcept = async (dirPath: string, toKeep: string[]) => {
-    if (
-      await Deno.stat(dirPath)
-        .then(() => false)
-        .catch(() => true)
-    ) {
-      return;
-    }
-    for await (const dirEntry of Deno.readDir(dirPath)) {
-      const fn = join(dirPath, dirEntry.name);
-      if (toKeep.includes(fn)) continue;
-      await Deno.remove(join(dirPath, dirEntry.name), { recursive: true });
-    }
-  };
   await removeExcept(absoluteReferenceDirectory, toKeep);
 
   const endpointBasePath = manifest.basePath ?? ".";

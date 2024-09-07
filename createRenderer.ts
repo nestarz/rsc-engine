@@ -45,7 +45,9 @@ export const createRenderer = (
           const [relativePath, exportName] = decodeURIComponent(
             new URL(req.url).searchParams.get("rsc_action_id")!,
           ).split("#");
-          const href = toFileUrl(join(Deno.cwd(), relativePath)).href;
+          const href = URL.canParse(relativePath)
+            ? relativePath
+            : toFileUrl(join(Deno.cwd(), relativePath)).href;
           const { [exportName]: fn } = href ? await import(href) : {};
           ctx.state.redirect = (
             url: string,

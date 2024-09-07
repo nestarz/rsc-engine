@@ -32,7 +32,7 @@ export const ClientReference = ({
         <Component {...props} />
       </Suspense>
     )
-    : null;
+    : fallback;
 };
 
 export default ClientReference;
