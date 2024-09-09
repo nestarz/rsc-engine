@@ -1,6 +1,6 @@
 {
   "name": "@bureaudouble/rsc-engine",
-  "version": "0.0.109",
+  "version": "0.0.115",
   "license": "UNLICENSED",
   "compilerOptions": {
     "lib": ["dom", "dom.iterable", "dom.asynciterable", "deno.ns"],
@@ -10,6 +10,8 @@
   },
   "exports": {
     ".": "./mod.ts",
+    "./route-context": "./route-context.tsx",
+    "./client": "./client.tsx",
     "./ClientOnly": "./ClientOnly.tsx",
     "./react.react-server": "./vendor/react/react.react-server.production.js",
     "./react.forker": "./react.forker.ts",
@@ -20,9 +22,11 @@
   },
   "imports": {
     "@bureaudouble-forks/importmap": "jsr:@bureaudouble-forks/importmap@0.2.1",
+    "@bureaudouble/deno-info": "jsr:@bureaudouble/deno-info@0.1.0",
     "@bureaudouble/outils": "jsr:@bureaudouble/outils@0.0.91",
     "@bureaudouble/scripted": "jsr:@bureaudouble/scripted@0.0.2",
-    "@luca/esbuild-deno-loader": "jsr:@bureaudouble-forks/esbuild-deno-loader@0.10.3+nestarz.quiet.0.0.3",
+    "@fartlabs/rt": "jsr:@fartlabs/rt@^0.0.3",
+    "@luca/esbuild-deno-loader": "jsr:@bureaudouble-forks/esbuild-deno-loader@0.10.4",
     "@std/http/": "jsr:/@std/http@1.0.0-rc.2/",
     "@std/path/": "jsr:/@std/path@1.0.0-rc.2/",
     "@teemukurki/rate-limiter": "jsr:@teemukurki/rate-limiter@^0.0.3",

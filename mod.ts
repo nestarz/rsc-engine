@@ -14,7 +14,7 @@ import { RateLimiter } from "@teemukurki/rate-limiter";
 import { getHashSync } from "@bureaudouble/scripted";
 import { calculate } from "@std/http/etag";
 
-import { info, type ModuleEntryEsm } from "./info.ts";
+import { info, type ModuleEntryEsm } from "@bureaudouble/deno-info";
 import { createRenderer } from "./createRenderer.ts";
 
 const absolute = (...a: string[]) => join(Deno.cwd(), ...a);
@@ -72,44 +72,42 @@ const generateClientReferenceServerCode = (
   specifierURL: string,
   originalSpecifierURL: string,
   ids: string[],
-) =>
-  [
-    `import { registerClientReference } from "react-server-dom-esm/server.edge";`,
-    `import { join } from "@std/path/join";`,
-    `import type * as _RSC_exports from ${
-      JSON.stringify(
-        toImportUrl(getRelativePathOrUrl(bundleURL, relativeBundleDirectory)),
-      )
-    };`,
-    `(() => import(${
-      JSON.stringify(
-        toImportUrl(
-          getRelativePathOrUrl(specifierURL, relativeBundleDirectory),
-        ),
-      )
-    })); // hack: add for statistical analysis`,
-    `import(${
-      JSON.stringify(
-        toImportUrl(
-          getRelativePathOrUrl(originalSpecifierURL, relativeBundleDirectory),
-        ),
-      )
-    }).catch(() => null); // hack: add for hmr analysis`,
-    `const rcr = <T extends keyof typeof _RSC_exports>(id: T, url = ${
-      JSON.stringify(
-        specifierURL,
-      )
-    }): typeof _RSC_exports[T] => registerClientReference({}, URL.canParse(url) ? url : join(Deno.cwd(), url), id);`,
-    ...ids.flatMap((exportName) => {
-      const exportKey = exportName === "default"
-        ? `const _RSC_default =`
-        : `export const ${exportName} =`;
-      return [
-        `${exportKey} rcr(${JSON.stringify(exportName)});`,
-        ...(exportName === "default" ? [`export default _RSC_default;`] : []),
-      ];
-    }),
-  ].join("\n");
+) => `
+import { registerClientReference } from "react-server-dom-esm/server.edge";
+import { join } from "@std/path/join";
+import type * as _RSC_exports from ${
+  JSON.stringify(
+    toImportUrl(getRelativePathOrUrl(bundleURL, relativeBundleDirectory)),
+  )
+};
+(() => import(${
+  JSON.stringify(
+    toImportUrl(getRelativePathOrUrl(specifierURL, relativeBundleDirectory)),
+  )
+}));
+import(${
+  JSON.stringify(
+    toImportUrl(
+      getRelativePathOrUrl(originalSpecifierURL, relativeBundleDirectory),
+    ),
+  )
+}).catch(() => null);
+const rcr = <T extends keyof typeof _RSC_exports>(id: T) => {
+  const url = ${JSON.stringify(specifierURL)};
+  return registerClientReference({}, URL.canParse(url) ? url : join(Deno.cwd(), url), id);
+};
+const rcrHMR = (name: keyof typeof _RSC_exports) =>
+  new Proxy({}, { get(_target, prop) { return rcr(name)[prop] } });
+${
+  ids
+    .map((exportName) =>
+      exportName === "default"
+        ? `const _RSC_default = rcrHMR("default");\nexport default _RSC_default;`
+        : `export const ${exportName} = rcrHMR(${JSON.stringify(exportName)});`
+    )
+    .join("\n")
+}
+`;
 
 const generateServerReferenceServerCode = (
   relativeReferenceDirectory: string,
@@ -125,11 +123,10 @@ const generateServerReferenceServerCode = (
         ),
       )
     };`,
-    `const rsr = <T extends keyof typeof _RSC_exports>(id: T, url = ${
-      JSON.stringify(
-        specifierURL,
-      )
-    }): typeof _RSC_exports[T] => registerServerReference(_RSC_exports[id], url, id);`,
+    `const rsr = <T extends keyof typeof _RSC_exports>(id: T): typeof _RSC_exports[T] => {
+      const url = ${JSON.stringify(specifierURL)};
+      return registerServerReference(_RSC_exports[id], url, id);
+    };`,
     ...ids.flatMap((exportName) => {
       const exportKey = exportName === "default"
         ? `const _RSC_default =`
@@ -256,9 +253,19 @@ const getRelativePathOrUrl = (specifier: string, relativeDir = Deno.cwd()) => {
     : relative(relativeDir, specifier);
 };
 
-const locateModuleInBuild = (build: Esbuild.BuildResult, specifier: string) =>
+const locateModuleInBuild = (
+  build: Esbuild.BuildResult,
+  specifier: string,
+  moduleInfos: {
+    redirects: {
+      [k: string]: string;
+    };
+  },
+) =>
   Object.entries(build.metafile?.outputs ?? {}).find(
-    ([, v]) => v.entryPoint === getRelativePathOrUrl(specifier),
+    ([, v]) =>
+      v.entryPoint === getRelativePathOrUrl(specifier) ||
+      v.entryPoint === resolveJsrSpecifier(moduleInfos, specifier),
   );
 
 const resolveJsrSpecifier = (
@@ -398,7 +405,9 @@ const setupClientComponentsBase = async (
   const esbuildOptions = { quiet: true, importMapURL: infoOptions.importMap };
   const timeEndInfo = timeStartEnd("info");
   const moduleInfos = await Promise.all(
-    [manifest.entryPoint].map((entryPoint) => info(entryPoint, infoOptions)),
+    [manifest.entryPoint, ...manifest.bootstrapModules ?? []].map((
+      entryPoint,
+    ) => info(entryPoint, infoOptions)),
   );
   timeEndInfo();
 
@@ -745,12 +754,16 @@ const setupClientComponentsBase = async (
 
   const endpointBasePath = manifest.basePath ?? ".";
   const updatedBootstrapModules = manifest.bootstrapModules
-    .map((specifier) => locateModuleInBuild(esbuildResult, specifier)!)
+    .map((specifier, i) =>
+      locateModuleInBuild(esbuildResult, specifier, moduleInfos.at(i + 1))!
+    )
     .map((resolvedPath) => join("/", endpointBasePath, resolvedPath[0]));
 
   const updatedExternals = Object.fromEntries(
     (manifest.external ?? [])
-      .map((specifier) => locateModuleInBuild(esbuildResult, specifier)!)
+      .map((specifier) =>
+        locateModuleInBuild(esbuildResult, specifier, moduleInfos.at(0))!
+      )
       .map((resolvedPath) => join("/", endpointBasePath, resolvedPath[0]))
       .map((v, i) => [getRelativePathOrUrl(manifest.external[i]), v]),
   );
