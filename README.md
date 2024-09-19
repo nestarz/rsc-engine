@@ -40,18 +40,6 @@ deno add jsr:@bureaudouble/rsc-engine
 
 ## Usage
 
-### Setup
-
-To use the RSC Engine, you need to set up a manifest file that specifies your
-project configuration. Below is an example of a manifest file:
-
-```ts
-const manifest = {
-  entryPoint: import.meta.url,
-  bootstrapModules: [import.meta.resolve("@bureaudouble/rsc-engine/client")],
-};
-```
-
 ### Creating a Hello World Component with "use client" and "use server" features:
 
 ```tsx
@@ -95,6 +83,11 @@ export default function getServerDate() {
 }
 ```
 
+### Setup
+
+To use the RSC Engine, you need to set up a manifest file that specifies your
+project configuration. Below is an example of a manifest file:
+
 ### Build and serve
 
 To serve or build your project, run the setup function using a router (ex: @fartlabs/rt) this way:
@@ -104,7 +97,10 @@ To serve or build your project, run the setup function using a router (ex: @fart
 import { setupClientComponents } from "@bureaudouble/rsc-engine";
 import { createRouter } from "jsr:@fartlabs/rt@0.0.3";
 
-const setup = await setupClientComponents(manifest);
+const setup = await setupClientComponents({
+  entryPoint: import.meta.url,
+  bootstrapModules: [import.meta.resolve("@bureaudouble/rsc-engine/client")],
+});
 
 const clientRsc = await setupClientComponents({
   entryPoint: import.meta.url,
