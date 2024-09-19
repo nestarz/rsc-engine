@@ -19,7 +19,13 @@ ensuring efficient and effective module management.
 
 ## Use the demo
 
-git clone [github.com/nestarz/bureaudouble-rsc-demo](https://github.com/nestarz/bureaudouble-rsc-demo.git)
+See the framework in action here: https://bureaudouble-rsc-demo.deno.dev/
+
+To create a new project based on the demo, run:
+
+```bash
+git clone https://github.com/nestarz/bureaudouble-rsc-demo.git
+```
 
 ## Installation
 
