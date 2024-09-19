@@ -85,7 +85,7 @@ export default function getServerDate() {
 ### Setup
 
 To use the RSC Engine, you need to set up a manifest file that specifies your
-project configuration. Below is an example of a manifest file:
+project configuration. You also need a special `deno.json` which will resolve accordingly the react ecosystem specifiers, you need to take this one as a base: https://github.com/nestarz/bureaudouble-rsc-demo/blob/main/deno.json.
 
 ### Build and serve
 
