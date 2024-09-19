@@ -25,6 +25,8 @@ To create a new project based on the demo, run:
 
 ```bash
 git clone https://github.com/nestarz/bureaudouble-rsc-demo.git
+cd bureaudouble-rsc-demo
+deno run start
 ```
 
 ## Installation
