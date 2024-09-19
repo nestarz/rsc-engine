@@ -29,7 +29,7 @@ Ensure you have Deno installed. You can install it from
 Add the package to your project:
 
 ```bash
-deno add @bureaudouble/rsc-engine
+deno add jsr:@bureaudouble/rsc-engine
 ```
 
 ## Usage
@@ -41,63 +41,89 @@ project configuration. Below is an example of a manifest file:
 
 ```ts
 const manifest = {
-  minify: false,
-  namespace: "default",
   entryPoint: import.meta.url,
-  moduleBaseURL: import.meta.resolve("./"),
-  importMap: import.meta.resolve("./deno.json"),
-  bootstrapModules: [import.meta.resolve("./src/client.tsx")], // You must provides a client.tsx
-  external: [],
+  bootstrapModules: [import.meta.resolve("@bureaudouble/rsc-engine/client")],
 };
 ```
 
-### Creating a Hello World Component
-
-Create a `index.tsx` file in your `src` directory:
+### Creating a Hello World Component with "use client" and "use server" features:
 
 ```tsx
-// src/index.tsx
-import React from "react";
+// /app/pages/index.tsx
+import ClientComponent from "@/app/components/client.tsx";
+import getServerDate from "@/app/actions/get-server-date.ts";
 
-export default function HelloWorld() {
+export default async function HelloWorld() {
   return (
     <html>
       <body>
         <h1>Hello, World!</h1>
-        <ClientComponent />
+        <ClientComponent initial={await getServerDate()} />
       </body>
     </html>
   );
 }
 
-// src/client-component.tsx
+// /app/components/client.tsx
 "use client";
-import React from "react";
+import getServerDate from "@/app/actions/get-server-date.ts";
+import { useState, useTransition } from "react";
 
-export default function ClientComponent() {
-  const [count, setCount] = useState(0);
-  return <button onClick={() => setCount((s) => s + 1)}>{count}</button>;
+export default function ClientComponent({ initial }) {
+  const [isPending, startTransition] = useTransition();
+  const [serverDate, setServerDate] = useState(initial);
+  const onClick = () =>
+    startTransition(async () => void setLikeCount(await getServerDate()));
+  return (
+    <button onClick={onClick} disabled={isPending}>
+      {serverDate}
+    </button>
+  );
+}
+
+// /app/actions/get-server-date.ts
+"use server";
+
+export default function getServerDate() {
+  return Date.now();
 }
 ```
 
 ### Build and serve
 
-To build your project, run the setup function and ensure all components are
-bundled correctly:
+To serve or build your project, run the setup function using a router (ex: @fartlabs/rt) this way:
 
 ```typescript
 // main.ts
 import { setupClientComponents } from "@bureaudouble/rsc-engine";
+import { createRouter } from "jsr:@fartlabs/rt@0.0.3";
 
 const setup = await setupClientComponents(manifest);
 
-Deno.serve(setup.render(() => import("@/src/index.tsx")));
+const clientRsc = await setupClientComponents({
+  entryPoint: import.meta.url,
+  bootstrapModules: [import.meta.resolve("@bureaudouble/rsc-engine/client")],
+});
+
+const router = createRouter()
+  .with(clientRsc.route)
+  .use(clientRsc.createRscRoutes({ "/": import("@/app/pages/index.tsx") }));
+
+Deno.args.some((v) => v === "build")
+  ? Deno.exit(0)
+  : Deno.serve((request) => router.fetch(request));
 ```
 
-Run the build script:
+Run the script with HMR enabled:
 
 ```bash
-deno run --allow-read --allow-write --allow-net main.ts
+deno run --allow-read --allow-write --allow-net --unstable-hmr main.ts
+```
+
+Run the build:
+
+```bash
+deno run --allow-read --allow-write --allow-net --unstable-hmr main.ts build
 ```
 
 ## License
