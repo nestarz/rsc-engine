@@ -102,14 +102,9 @@ const setup = await setupClientComponents({
   bootstrapModules: [import.meta.resolve("@bureaudouble/rsc-engine/client")],
 });
 
-const clientRsc = await setupClientComponents({
-  entryPoint: import.meta.url,
-  bootstrapModules: [import.meta.resolve("@bureaudouble/rsc-engine/client")],
-});
-
 const router = createRouter()
-  .with(clientRsc.route)
-  .use(clientRsc.createRscRoutes({ "/": import("@/app/pages/index.tsx") }));
+  .with(setup.route)
+  .use(setup.createRscRoutes({ "/": import("@/app/pages/index.tsx") }));
 
 Deno.args.some((v) => v === "build")
   ? Deno.exit(0)
@@ -119,12 +114,9 @@ Deno.args.some((v) => v === "build")
 Run the script with HMR enabled:
 
 ```bash
-deno run --allow-read --allow-write --allow-net --unstable-hmr main.ts
-```
-
-Run the build:
-
-```bash
+# dev
+deno run --allow-read --allow-write --allow-net --unstable-hmr main.ts 
+# build
 deno run --allow-read --allow-write --allow-net --unstable-hmr main.ts build
 ```
 
