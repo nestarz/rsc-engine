@@ -19,7 +19,7 @@ ensuring efficient and effective module management.
 
 ## Use the demo
 
-https://github.com/nestarz/bureaudouble-rsc-demo/
+git clone [github.com/nestarz/bureaudouble-rsc-demo](https://github.com/nestarz/bureaudouble-rsc-demo.git)
 
 ## Installation
 
