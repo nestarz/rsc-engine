@@ -313,7 +313,7 @@ interface Manifest {
   minify?: boolean;
   verbose?: "info" | "error";
   basePath?: string;
-  namespace: string;
+  namespace?: string;
   clientImports?: {
     imports?: Record<string, string>;
     scopes?: Record<string, Record<string, string>>;
@@ -329,6 +329,20 @@ interface ClientComponentsBaseOutput {
 interface OutputMapping {
   [x: string]: { endpointPath: string };
 }
+
+type Optional<T, K extends keyof T> = Pick<Partial<T>, K> & Omit<T, K>;
+type ManifestInput = Optional<
+  Manifest,
+  "moduleBaseURL" | "importMap" | "minify" | "external"
+>;
+
+const prepareManifest = (manifest: ManifestInput): Manifest => {
+  manifest.moduleBaseURL ??= dirname(manifest.entryPoint);
+  manifest.importMap ??= join(manifest.moduleBaseURL, "./deno.json");
+  manifest.minify ??= Deno.env.get("NODE_ENV") === "production";
+  manifest.external ??= [];
+  return manifest as Manifest;
+};
 
 const setupClientComponentsBase = async (
   manifest: Manifest,
@@ -788,7 +802,8 @@ export const getUrlFromExternals = (k: string) =>
     new URL(k).protocol === "file:" ? relative(Deno.cwd(), fromFileUrl(k)) : k
   ];
 
-export const setupClientComponents = async (manifest: Manifest) => {
+export const setupClientComponents = async (manifestInput: ManifestInput) => {
+  const manifest = prepareManifest(manifestInput);
   const state = {};
   let result = setupClientComponentsBase(manifest, state);
   if (new URL(manifest.entryPoint).protocol === "file:") {
@@ -889,6 +904,9 @@ export const setupClientComponents = async (manifest: Manifest) => {
             "/",
             manifest.basePath?.concat(m.pathname) ?? m.pathname,
           ),
+        })).map(({ method, handle, pathname }) => ({
+          match: { method, pattern: new URLPattern({ pathname }) },
+          handle,
         }));
       },
     };

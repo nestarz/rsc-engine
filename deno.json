@@ -1,6 +1,6 @@
 {
   "name": "@bureaudouble/rsc-engine",
-  "version": "0.0.125",
+  "version": "0.0.126",
   "license": "UNLICENSED",
   "compilerOptions": {
     "lib": ["dom", "dom.iterable", "dom.asynciterable", "deno.ns"],
