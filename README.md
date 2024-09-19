@@ -51,7 +51,6 @@ export default async function HelloWorld() {
   return (
     <html>
       <body>
-        <h1>Hello, World!</h1>
         <ClientComponent initial={await getServerDate()} />
       </body>
     </html>
@@ -79,7 +78,7 @@ export default function ClientComponent({ initial }) {
 "use server";
 
 export default function getServerDate() {
-  return Date.now();
+  return `Hello World, the server date is ${Date.now()}`;
 }
 ```
 
