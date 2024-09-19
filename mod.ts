@@ -12,10 +12,11 @@ import { resolveImportMap } from "@bureaudouble-forks/importmap";
 import { denoPlugins } from "@luca/esbuild-deno-loader";
 import { RateLimiter } from "@teemukurki/rate-limiter";
 import { getHashSync } from "@bureaudouble/scripted";
-import { calculate } from "@std/http/etag";
+import { eTag } from "@std/http/etag";
 
 import { info, type ModuleEntryEsm } from "@bureaudouble/deno-info";
 import { createRenderer } from "./createRenderer.ts";
+import { withRouteContext } from "./route-context.tsx";
 
 const absolute = (...a: string[]) => join(Deno.cwd(), ...a);
 
@@ -499,7 +500,7 @@ const setupClientComponentsBase = async (
       .filter((v) => !v.specifier.startsWith("http"))
       .filter((v) => !v.specifier.startsWith("jsr:"))
       .filter((v) => !v.specifier.startsWith("npm:"))
-      .map((v) => Deno.stat(v.local!).then(calculate)),
+      .map((v) => Deno.stat(v.local!).then(eTag)),
   );
   timeEndEntryInfo();
 
@@ -755,14 +756,14 @@ const setupClientComponentsBase = async (
   const endpointBasePath = manifest.basePath ?? ".";
   const updatedBootstrapModules = manifest.bootstrapModules
     .map((specifier, i) =>
-      locateModuleInBuild(esbuildResult, specifier, moduleInfos.at(i + 1))!
+      locateModuleInBuild(esbuildResult, specifier, moduleInfos.at(i + 1)!)!
     )
     .map((resolvedPath) => join("/", endpointBasePath, resolvedPath[0]));
 
   const updatedExternals = Object.fromEntries(
     (manifest.external ?? [])
       .map((specifier) =>
-        locateModuleInBuild(esbuildResult, specifier, moduleInfos.at(0))!
+        locateModuleInBuild(esbuildResult, specifier, moduleInfos.at(0)!)!
       )
       .map((resolvedPath) => join("/", endpointBasePath, resolvedPath[0]))
       .map((v, i) => [getRelativePathOrUrl(manifest.external[i]), v]),
@@ -849,8 +850,47 @@ export const setupClientComponents = async (manifest: Manifest) => {
         });
       },
     },
-  }).then((result) => ({
-    ...result,
-    render: createRenderer(result, manifest.moduleBaseURL),
-  }));
+  }).then((result) => {
+    const render = createRenderer(result, manifest.moduleBaseURL);
+    return {
+      ...result,
+      render,
+      createRscRoutes: <T extends (arg: any) => any>(
+        routes: {
+          [key: string]: Promise<{ default: T | Promise<T> }>;
+        },
+        options?: { state?: any | (() => any) },
+      ) => {
+        const prepare = <T>(p: Promise<{ default: T }> | { default: T }) => {
+          const res = Promise.resolve(p).then((v) =>
+            render(
+              withRouteContext(v.default as any),
+              typeof options?.state === "function"
+                ? options?.state()
+                : options?.state,
+            )
+          );
+          return (...params: [any]) => res.then((fn) => fn(...params));
+        };
+        return [
+          ...Object.entries(routes).map(
+            (
+              [pathname, v],
+            ) => ({ method: "GET", handle: prepare(v), pathname } as const),
+          ),
+          {
+            pathname: "/actions{/}?",
+            handle: prepare({ default: () => null }),
+            method: "POST",
+          } as const,
+        ].map((m) => ({
+          ...m,
+          pathname: join(
+            "/",
+            manifest.basePath?.concat(m.pathname) ?? m.pathname,
+          ),
+        }));
+      },
+    };
+  });
 };

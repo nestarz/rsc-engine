@@ -187,13 +187,13 @@ export const useNavigation = () => {
             ? value.reload
             : getURLPath();
           globalThis.history.pushState(null, "", url);
-          startTransition(() => globalThis.navigate?.(url, { force: true }));
+          startTransition(() => (globalThis as any).navigate?.(url, { force: true }));
         }
       }
       return value;
     },
   };
-  globalThis.callServer = readableStreamOptions.callServer;
+  (globalThis as any).callServer = readableStreamOptions.callServer;
   const navigate = (
     path: string,
     options?: { force?: boolean; preventVisitLog?: boolean },
@@ -238,7 +238,7 @@ export const useNavigation = () => {
       // setPathname(path);
     });
   };
-  globalThis.navigate = navigate;
+  (globalThis as any).navigate = navigate;
 
   const interceptLinkClick = (event_: Event) => {
     const event = event_ as MouseEvent;

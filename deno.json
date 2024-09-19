@@ -1,6 +1,6 @@
 {
   "name": "@bureaudouble/rsc-engine",
-  "version": "0.0.115",
+  "version": "0.0.125",
   "license": "UNLICENSED",
   "compilerOptions": {
     "lib": ["dom", "dom.iterable", "dom.asynciterable", "deno.ns"],
@@ -27,8 +27,8 @@
     "@bureaudouble/scripted": "jsr:@bureaudouble/scripted@0.0.2",
     "@fartlabs/rt": "jsr:@fartlabs/rt@^0.0.3",
     "@luca/esbuild-deno-loader": "jsr:@bureaudouble-forks/esbuild-deno-loader@0.10.4",
-    "@std/http/": "jsr:/@std/http@1.0.0-rc.2/",
-    "@std/path/": "jsr:/@std/path@1.0.0-rc.2/",
+    "@std/http/": "jsr:/@std/http@1.0.6/",
+    "@std/path/": "jsr:/@std/path@1.0.6/",
     "@teemukurki/rate-limiter": "jsr:@teemukurki/rate-limiter@^0.0.3",
     "@types/react": "npm:types-react@alpha",
     "@types/react-dom": "npm:types-react-dom@alpha",
@@ -37,12 +37,12 @@
     "react": "npm:react@19.0.0-rc.0",
     "react-dom": "npm:react-dom@19.0.0-rc.0",
     "react-dom/": "npm:/react-dom@19.0.0-rc.0/",
+    "react/": "npm:/react@19.0.0-rc.0/",
     "react-server-dom-esm/client.browser": "./vendor/react-server-dom-esm/react-server-dom-esm-client.browser.development.js",
     "react-server-dom-esm/node-loader": "./vendor/react-server-dom-esm/react-server-dom-esm-node-loader.production.js",
     "react-server-dom-esm/server.edge": "./renderToReadableStream.ts",
     "react-server-dom-esm/server.node": "./vendor/react-server-dom-esm/cjs/react-server-dom-esm-server.node.development.js",
     "react.react-server": "./vendor/react/react.react-server.production.js",
-    "react/": "npm:/react@19.0.0-rc.0/",
     "rsc-html-stream": "jsr:@bureaudouble/rsc-html-stream@0.0.2"
   }
 }

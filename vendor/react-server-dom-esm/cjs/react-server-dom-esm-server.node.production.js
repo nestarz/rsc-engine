@@ -14,6 +14,7 @@ import util from "node:util";
 import "node:crypto";
 import async_hooks from "node:async_hooks";
 import ReactDOM from "react-dom";
+import { Buffer } from "node:buffer";
 
 var currentView = null,
   writtenBytes = 0,
