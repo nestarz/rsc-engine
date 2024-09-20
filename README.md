@@ -122,7 +122,7 @@ deno run --allow-read --allow-write --allow-net --unstable-hmr main.ts build
 
 ## License
 
-This project is licensed under the CC0-1.0 License. See the [LICENSE](LICENSE)
+This project is licensed under the Commons Clause License. See the [LICENSE](LICENSE)
 file for more information.
 
 ## Contributing
